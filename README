@@ -1,0 +1,8 @@
+PySPMV
+======
+
+The goal of this library is to develop Python only implementations of distributed sparse
+matrix-vector products and other frequently used sparse operations. It is modelled on the
+algorithms in the spmv (https://github.com/Excalibur-SLE/spmv) directory.
+
+
