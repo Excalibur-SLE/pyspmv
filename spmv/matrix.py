@@ -12,7 +12,7 @@ import numba
 from scipy.sparse.linalg import LinearOperator
 
 
-class Matrix(LinearOperator):
+class CsrMatrix(LinearOperator):
     """Implementation of a CSR matrix."""
 
     def __init__(self, data, indices, indptr, shape):
@@ -54,20 +54,20 @@ class Matrix(LinearOperator):
     def from_coo(cls, row_indices, col_indices, data, shape):
         """Create sparse matrix from AIJ representation."""
 
-        csr_data, indices, indptr = _numba_csr_from_aij(
+        csr_data, indices, indptr = _numba_csr_from_coo(
             row_indices, col_indices, data, shape[0]
         )
 
         return cls(csr_data, indices, indptr, shape)
 
 
-@numba.njit(parallel=True)
+@numba.njit
 def _numba_matvec(vec, data, indices, indptr, nrows):
     """Numba implementation of CSR Matvec."""
 
     res = numpy.zeros(nrows, dtype=vec.dtype)
 
-    for row_index in numba.prange(shape[0]):
+    for row_index in range(nrows):
         for index in range(indptr[row_index], indptr[row_index + 1]):
             col_index = indices[index]
             res[row_index] += data[index] * vec[col_index]
@@ -80,10 +80,10 @@ def _numba_csr_from_coo(row_indices, col_indices, data, nrows):
     """Numba implementation of AIJ to CSR conversion."""
 
     nnz = data.shape[0]
-    elems_per_row = numpy.zeros(nrows, dtype=np.int64)
+    elems_per_row = numpy.zeros(nrows, dtype=numpy.int64)
     csr_data = numpy.empty(nnz, dtype=data.dtype)
-    indices = numpy.empty(nnz, dtype=np.int64)
-    indptr = numpy.empty(1 + nrows, dtype=np.int64)
+    indices = numpy.empty(nnz, dtype=numpy.int64)
+    indptr = numpy.empty(1 + nrows, dtype=numpy.int64)
 
     for index in range(nnz):
         elems_per_row[row_indices[index]] += 1
@@ -107,6 +107,6 @@ def _numba_csr_from_coo(row_indices, col_indices, data, nrows):
 
     last = 0
     for index in range(nrows):
-        indptr[i], last = last, indptr[i + 1]
+        indptr[index], last = last, indptr[index]
 
     return csr_data, indices, indptr
